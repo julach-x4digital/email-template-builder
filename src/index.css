@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+
+/* App fills the viewport; the builder controls its own max widths inside the canvas. */
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100dvh;
+  width: 100%;
+  max-width: none;
+}
