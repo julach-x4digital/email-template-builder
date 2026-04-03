@@ -2,7 +2,7 @@ import { EditorShell } from '@/components/editor/EditorShell'
 import './index.css'
 
 function App() {
-  return <EditorShell />
+  return <EditorShell /> 
 }
 
 export default App
