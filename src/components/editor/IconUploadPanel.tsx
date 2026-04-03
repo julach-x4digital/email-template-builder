@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
+import { uploadFileToEndpoint } from '@/utils/emailBuilderApi'
 import { FiLink, FiTrash2, FiUploadCloud } from 'react-icons/fi'
 
 type Icon = { src: string; alt: string }
@@ -18,9 +20,11 @@ export function IconUploadPanel({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const prevBlobRef = useRef<string | null>(null)
+  const apiCfg = useEmailBuilderApi()
 
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [urlDraft, setUrlDraft] = useState(icon.src)
 
   const canApplyUrl = useMemo(() => urlDraft.trim().length > 0, [urlDraft])
@@ -43,14 +47,35 @@ export function IconUploadPanel({
     onUpdate({ src: nextSrc, alt: icon.alt || 'Icon' })
   }
 
-  const updateFromFile = (file: File) => {
+  const updateFromFile = async (file: File) => {
     setError(null)
-    // 3MB is consistent with the image panel.
     const maxBytes = 3 * 1024 * 1024
     if (file.size > maxBytes) {
       setError('Max size is 3MB.')
       return
     }
+
+    if (apiCfg.api && apiCfg.imgUrl) {
+      setUploading(true)
+      try {
+        const url = await uploadFileToEndpoint(apiCfg.imgUrl, file, {
+          fieldName: apiCfg.uploadFieldName,
+          credentials: apiCfg.credentials,
+          parseUploadResponse: apiCfg.parseUploadResponse,
+        })
+        if (prevBlobRef.current && isBlobUrl(prevBlobRef.current)) {
+          URL.revokeObjectURL(prevBlobRef.current)
+        }
+        prevBlobRef.current = null
+        onUpdate({ src: url, alt: icon.alt || file.name || 'Icon' })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Upload failed')
+      } finally {
+        setUploading(false)
+      }
+      return
+    }
+
     const blobUrl = URL.createObjectURL(file)
     if (prevBlobRef.current && isBlobUrl(prevBlobRef.current)) {
       URL.revokeObjectURL(prevBlobRef.current)
@@ -80,7 +105,7 @@ export function IconUploadPanel({
           setIsDragging(false)
           const f = e.dataTransfer.files?.[0]
           if (!f) return
-          updateFromFile(f)
+          void updateFromFile(f)
         }}
       >
         {icon.src ? (
@@ -112,14 +137,20 @@ export function IconUploadPanel({
               <FiUploadCloud aria-hidden />
             </div>
             <div className="text-sm font-semibold text-slate-800">Drop an icon</div>
-            <div className="mt-1 text-xs text-slate-500">PNG, JPG, or GIF (max 3MB)</div>
+            <div className="mt-1 text-xs text-slate-500">
+              PNG, JPG, or GIF (max 3MB)
+              {apiCfg.api && apiCfg.imgUrl ? (
+                <span className="block text-indigo-600">Files upload to your server.</span>
+              ) : null}
+            </div>
             <div className="mt-3 flex items-center justify-center gap-2">
               <button
                 type="button"
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+                disabled={uploading}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Browse
+                {uploading ? 'Uploading…' : 'Browse'}
               </button>
               <input
                 ref={fileInputRef}
@@ -129,7 +160,7 @@ export function IconUploadPanel({
                 onChange={(e) => {
                   const f = e.target.files?.[0]
                   if (!f) return
-                  updateFromFile(f)
+                  void updateFromFile(f)
                   e.currentTarget.value = ''
                 }}
               />

@@ -1,8 +1,7 @@
-import { EditorShell } from '@/components/editor/EditorShell'
-import './index.css'
+import { EmailBuilder } from '@/EmailBuilder'
 
 function App() {
-  return <EditorShell /> 
+  return <EmailBuilder />
 }
 
 export default App

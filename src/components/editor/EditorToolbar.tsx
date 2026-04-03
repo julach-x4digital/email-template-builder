@@ -3,14 +3,20 @@ import { GrUndo, GrRedo } from 'react-icons/gr'
 import { PiExport } from 'react-icons/pi'
 import { BsEyeSlash, BsEyeSlashFill } from 'react-icons/bs'
 import { createExampleTemplate } from '@/core/exampleTemplate'
+import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
 import { useEmailStore } from '@/store/emailStore'
+import { postEmailExport } from '@/utils/emailBuilderApi'
 import { generateEmailHTML } from '@/utils/generateEmailHTML'
 
 /** Top actions: sections, undo/redo, reset demo, export HTML modal. */
 export function EditorToolbar() {
   const [exportOpen, setExportOpen] = useState(false)
   const [exportHtml, setExportHtml] = useState('')
+  const [exportPosting, setExportPosting] = useState(false)
+  const [exportPostOk, setExportPostOk] = useState<string | null>(null)
+  const [exportPostError, setExportPostError] = useState<string | null>(null)
 
+  const apiCfg = useEmailBuilderApi()
   const template = useEmailStore((s) => s.template)
   const addSection = useEmailStore((s) => s.addSection)
   const undo = useEmailStore((s) => s.undo)
@@ -21,9 +27,40 @@ export function EditorToolbar() {
   const canvasView = useEmailStore((s) => s.canvasView)
   const setCanvasView = useEmailStore((s) => s.setCanvasView)
 
+  const postExportIfConfigured = async (html: string) => {
+    if (!apiCfg.api || !apiCfg.exportUrl) return
+    setExportPosting(true)
+    setExportPostOk(null)
+    setExportPostError(null)
+    try {
+      const res = await postEmailExport(apiCfg.exportUrl, { html, template }, {
+        credentials: apiCfg.credentials,
+        buildExportBody: apiCfg.buildExportBody,
+        buildExportHeaders: apiCfg.buildExportHeaders,
+      })
+      apiCfg.onExportSuccess?.(res)
+      setExportPostOk('Template was sent to your server.')
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      setExportPostError(err.message)
+      apiCfg.onExportError?.(err)
+    } finally {
+      setExportPosting(false)
+    }
+  }
+
   const openExport = () => {
-    setExportHtml(generateEmailHTML(template))
+    const html = generateEmailHTML(template)
+    setExportHtml(html)
+    setExportPostOk(null)
+    setExportPostError(null)
     setExportOpen(true)
+    void postExportIfConfigured(html)
+  }
+
+  const retryServerExport = () => {
+    const html = exportHtml || generateEmailHTML(template)
+    void postExportIfConfigured(html)
   }
 
   return (
@@ -117,13 +154,49 @@ export function EditorToolbar() {
             </div>
             <p className="px-4 pt-3 text-xs text-slate-500">
               Table-based layout with inline styles from <code className="rounded bg-slate-100 px-1">generateEmailHTML</code>.
+              {apiCfg.api && apiCfg.exportUrl ? (
+                <span className="mt-1 block text-indigo-700">
+                  With API mode, opening this dialog also POSTs HTML and template JSON to your{' '}
+                  <code className="rounded bg-slate-100 px-1">exportUrl</code>.
+                </span>
+              ) : null}
             </p>
+            {exportPosting ? (
+              <p className="px-4 pt-2 text-xs font-semibold text-slate-600">Saving to server…</p>
+            ) : null}
+            {exportPostOk ? (
+              <p className="px-4 pt-2 text-xs font-semibold text-emerald-700">{exportPostOk}</p>
+            ) : null}
+            {exportPostError ? (
+              <div className="px-4 pt-2">
+                <p className="text-xs font-semibold text-red-700">{exportPostError}</p>
+                {apiCfg.api && apiCfg.exportUrl ? (
+                  <button
+                    type="button"
+                    className="mt-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    onClick={retryServerExport}
+                  >
+                    Retry server save
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <textarea
               readOnly
               className="m-4 min-h-[240px] flex-1 resize-y rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-800"
               value={exportHtml}
             />
             <div className="flex justify-end gap-2 border-t border-slate-200 px-4 py-3">
+              {apiCfg.api && apiCfg.exportUrl ? (
+                <button
+                  type="button"
+                  disabled={exportPosting}
+                  onClick={retryServerExport}
+                  className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+                >
+                  {exportPosting ? 'Saving…' : 'Save to server again'}
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={async () => {

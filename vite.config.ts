@@ -9,4 +9,7 @@ const srcDir = fileURLToPath(new URL('./src', import.meta.url))
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { '@': srcDir } },
+  build: {
+    outDir: 'build',
+  },
 })

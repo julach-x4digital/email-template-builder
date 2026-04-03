@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ImageContent } from '@/types'
+import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
+import { uploadFileToEndpoint } from '@/utils/emailBuilderApi'
 import { FiUploadCloud, FiLink, FiImage, FiTrash2 } from 'react-icons/fi'
 
 const MAX_MB = 3
@@ -22,9 +24,11 @@ export function ImageUploadPanel({
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const prevBlobUrlRef = useRef<string | null>(null)
+  const apiCfg = useEmailBuilderApi()
 
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   const [urlDraft, setUrlDraft] = useState(image.src)
 
@@ -45,14 +49,35 @@ export function ImageUploadPanel({
     }
   }, [])
 
-  const updateFromFile = (file: File) => {
+  const updateFromFile = async (file: File) => {
     setError(null)
     if (file.size > MAX_BYTES) {
       setError(`Max size is ${MAX_MB}MB.`)
       return
     }
+
+    if (apiCfg.api && apiCfg.imgUrl) {
+      setUploading(true)
+      try {
+        const url = await uploadFileToEndpoint(apiCfg.imgUrl, file, {
+          fieldName: apiCfg.uploadFieldName,
+          credentials: apiCfg.credentials,
+          parseUploadResponse: apiCfg.parseUploadResponse,
+        })
+        if (prevBlobUrlRef.current && isBlobUrl(prevBlobUrlRef.current)) {
+          URL.revokeObjectURL(prevBlobUrlRef.current)
+        }
+        prevBlobUrlRef.current = null
+        onUpdateContent({ src: url, alt: image.alt || file.name || 'Image' })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Upload failed')
+      } finally {
+        setUploading(false)
+      }
+      return
+    }
+
     const blobUrl = URL.createObjectURL(file)
-    // Revoke previous blob to avoid memory leaks.
     if (prevBlobUrlRef.current && isBlobUrl(prevBlobUrlRef.current)) {
       URL.revokeObjectURL(prevBlobUrlRef.current)
     }
@@ -82,7 +107,7 @@ export function ImageUploadPanel({
           setIsDragging(false)
           const f = e.dataTransfer.files?.[0]
           if (!f) return
-          updateFromFile(f)
+          void updateFromFile(f)
         }}
       >
         {image.src ? (
@@ -118,15 +143,19 @@ export function ImageUploadPanel({
             </div>
             <div className="mt-1 text-xs text-slate-500">
               PNG, JPG, or GIF (max {MAX_MB}MB)
+              {apiCfg.api && apiCfg.imgUrl ? (
+                <span className="block text-indigo-600">Files upload to your server.</span>
+              ) : null}
             </div>
 
             <div className="mt-3 flex items-center justify-center gap-2">
               <button
                 type="button"
-                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+                disabled={uploading}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Browse
+                {uploading ? 'Uploading…' : 'Browse'}
               </button>
               <input
                 ref={fileInputRef}
@@ -136,8 +165,7 @@ export function ImageUploadPanel({
                 onChange={(e) => {
                   const f = e.target.files?.[0]
                   if (!f) return
-                  updateFromFile(f)
-                  // Reset input so picking same file again triggers change.
+                  void updateFromFile(f)
                   e.currentTarget.value = ''
                 }}
               />
@@ -192,6 +220,9 @@ export function ImageUploadPanel({
         </div>
         <div className="text-[11px] text-slate-500">
           Tip: after uploading, you can still paste a URL to replace it.
+          {!(apiCfg.api && apiCfg.imgUrl) ? (
+            <span> Local files use a preview URL; export inlines images as data when needed.</span>
+          ) : null}
         </div>
       </div>
 
