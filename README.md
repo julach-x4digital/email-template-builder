@@ -1,73 +1,87 @@
-# React + TypeScript + Vite
+# @julach-earzan/email-template-builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React email editor: drag-and-drop sections and blocks, preview, and email-safe HTML export. Optional hooks POST uploads and template saves to your own API.
 
-Currently, two official plugins are available:
+## Requirements
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **React** 18+ and **React DOM** 18+ (peer dependencies; install them in your app).
 
-## React Compiler
+## Install
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install @julach-earzan/email-template-builder
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Styles
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Import the bundled stylesheet once (for example in your app entry or layout):
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```tsx
+import '@julach-earzan/email-template-builder/style.css'
 ```
+
+## Basic usage
+
+```tsx
+import { EmailBuilder } from '@julach-earzan/email-template-builder'
+import '@julach-earzan/email-template-builder/style.css'
+
+export function EditorPage() {
+  return <EmailBuilder />
+}
+```
+
+## Optional API integration
+
+When `api` is set and you pass URLs, the editor can upload images/icons to your server and POST the exported HTML + JSON when the user opens **Export HTML**.
+
+```tsx
+<EmailBuilder
+  api
+  imgUrl={{ method: 'post', url: 'https://api.example.com/upload' }}
+  exportUrl={{ method: 'post', url: 'https://api.example.com/templates' }}
+  loadUrl={{ method: 'get', url: 'https://api.example.com/templates/1' }}
+  credentials="include"
+  onTemplateChange={(template) => {
+    /* optional: keep a copy in parent state */
+  }}
+/>
+```
+
+### Props
+
+| Prop | Purpose |
+| ---- | ------- |
+| `api` | Enables HTTP behavior for `imgUrl`, `exportUrl`, and `loadUrl`. |
+| `imgUrl` | Multipart upload for **image** and **button icon** file picks. Default form field: `file` (override with `uploadFieldName`). |
+| `exportUrl` | On **Export HTML**, POSTs JSON `{ html, template }` as well as showing the HTML in the modal. |
+| `loadUrl` | Loads initial template JSON on mount. **Not used** if `template` is set (controlled mode). |
+| `template` | Controlled document; updates when this value’s JSON serialization changes. |
+| `credentials` | Passed to every `fetch` (`omit` \| `same-origin` \| `include`). |
+| `uploadFieldName` | Upload field name (default `file`). |
+| `parseUploadResponse` | `(json) => string \| undefined` if your upload response shape is custom. |
+| `buildExportBody` / `buildExportHeaders` | Customize the export request body and headers. |
+| `onTemplateChange` | Called when the document changes (deduped by JSON). |
+| `onExportSuccess` / `onExportError` | Export POST callbacks. |
+| `onLoadError` | Load failure or invalid `template` JSON. |
+| `className` / `style` | Wrapper around the editor shell. |
+
+**Upload response:** The client looks for a public image URL in common JSON fields (`url`, `src`, `path`, `data.url`, etc.) or a plain-text URL body.
+
+**Export body (default):** `Content-Type: application/json` with `{ "html": string, "template": EmailTemplate }`.
+
+## Other exports
+
+From the package entry you may also import:
+
+- `generateEmailHTML`, `generateEmailHTMLFromJson`, `generateEmailHTMLFromUnknown`
+- `normalizeEmailTemplate`, `emptyEmailTemplate`
+- Types: `EmailTemplate`, `EmailBuilderProps`, `ApiEndpoint`, and block/content types (see the package typings).
+
+## Limitation
+
+Editor state uses a **single global store**. Use **one** active `EmailBuilder` per page unless you integrate a per-instance store yourself.
+
+## License
+
+MIT © julach-earzan

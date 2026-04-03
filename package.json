@@ -1,8 +1,27 @@
 {
-  "name": "email-template",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@julach-earzan/email-template-builder",
+  "version": "0.1.0",
+  "description": "React email template editor with drag-and-drop blocks, preview, HTML export, and optional upload/export API hooks.",
   "type": "module",
+  "author": "julach-earzan",
+  "license": "MIT",
+  "keywords": [
+    "react",
+    "email",
+    "template",
+    "editor",
+    "builder",
+    "html",
+    "newsletter",
+    "drag-and-drop"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julach-earzan/email-template-builder.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,7 +36,9 @@
     "**/*.css"
   ],
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "peerDependencies": {
     "react": ">=18.0.0",
@@ -28,7 +49,8 @@
     "build": "tsc -b && vite build",
     "build:lib": "vite build --config vite.lib.config.ts",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:lib"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
