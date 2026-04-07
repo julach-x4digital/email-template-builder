@@ -153,7 +153,7 @@ export function BlockPreview({ component, selected, onSelect }: Props) {
       return shell(
         <TagEl
           className="m-0 break-words"
-          style={{ ...stylesToReact(textStyleRest), textAlign: ta }}
+          style={{ ...stylesToReact(textStyleRest), textAlign: ta, whiteSpace: 'pre-line' }}
           onClick={(e) => {
             e.stopPropagation()
             onSelect()

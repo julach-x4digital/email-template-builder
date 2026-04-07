@@ -4,6 +4,7 @@ import { ImMobile } from 'react-icons/im'
 import { SECTIONS_ROOT_ID } from '@/core/constants'
 import { useEmailStore } from '@/store/emailStore'
 import { SortableSectionRow } from '@/components/layout/SortableSectionRow'
+import { TemplateGalleryView } from '@/components/editor/TemplateGalleryView'
 import { generateEmailHTML } from '@/utils/generateEmailHTML'
 
 /** Center panel: split editor canvas + isolated live preview. */
@@ -33,7 +34,9 @@ export function EditorCanvas() {
       role="presentation"
     >
       <div className="flex w-full flex-1 px-3 py-4 sm:px-6 sm:py-6">
-        {canvasView === 'editor' ? (
+        {canvasView === 'templates' ? (
+          <TemplateGalleryView />
+        ) : canvasView === 'editor' ? (
           <section
             className="flex min-h-[480px] w-full min-w-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
             onClick={(e) => e.stopPropagation()}

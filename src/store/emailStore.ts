@@ -45,8 +45,10 @@ export type EmailStore = {
   ) => void
   previewDevice: 'desktop' | 'mobile'
   setPreviewDevice: (d: 'desktop' | 'mobile') => void
-  canvasView: 'editor' | 'preview'
-  setCanvasView: (v: 'editor' | 'preview') => void
+  canvasView: 'editor' | 'preview' | 'templates'
+  setCanvasView: (v: 'editor' | 'preview' | 'templates') => void
+  activeTemplateId: string | null
+  setActiveTemplateId: (id: string | null) => void
   select: (sel: EditorSelection | null) => void
 
   addSection: (atIndex?: number) => void
@@ -106,9 +108,11 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   future: [],
   previewDevice: 'desktop',
   canvasView: 'editor',
+  activeTemplateId: null,
 
   setPreviewDevice: (d) => set({ previewDevice: d }),
   setCanvasView: (v) => set({ canvasView: v }),
+  setActiveTemplateId: (id) => set({ activeTemplateId: id }),
 
   resetHistory: () => set({ past: [], future: [] }),
 

@@ -39,7 +39,8 @@ function renderPreheader(text: string): string {
 
 /** Escaped plain text → nested &lt;strong&gt;/&lt;em&gt;/&lt;sub&gt;/&lt;sup&gt; (whole block). */
 function formatTextInnerHtml(escapedPlain: string, tc: TextContent): string {
-  let x = escapedPlain
+  // Convert author-entered newlines to email-safe HTML line breaks.
+  let x = escapedPlain.replace(/\r?\n/g, '<br />')
   if (tc.subscript) x = `<sub style="font-size:0.85em;line-height:0">${x}</sub>`
   else if (tc.superscript) x = `<sup style="font-size:0.85em;line-height:0">${x}</sup>`
   if (tc.italic) x = `<em>${x}</em>`

@@ -1,93 +1,113 @@
 import type { EmailTemplate } from '@/types'
 import { newId } from '@/utils/id'
 
-/** Starter layout: hero text, image placeholder, CTA — demonstrates JSON shape. */
+/** Starter layout inspired by welcome-confirmation email. */
 export function createExampleTemplate(): EmailTemplate {
   const sectionId = newId()
   const colId = newId()
-  const t1 = newId()
-  const t2 = newId()
-  const img = newId()
+  const spacerTop = newId()
+  const title = newId()
+  const body = newId()
   const btn = newId()
+  const footer = newId()
 
   return {
     id: newId(),
-    documentName: 'New Message',
+    documentName: 'Welcome',
     meta: {
-      subject: 'Your April newsletter',
-      preheader: 'Updates inside — open to read more.',
+      subject: 'Welcome! Confirm your account',
+      preheader: 'Press the button below to verify your account.',
     },
     width: '600px',
     bodyStyles: {
-      backgroundColor: '#f4f4f5',
+      backgroundColor: '#4ea4f1',
       margin: '0',
-      padding: '24px 0',
+      padding: '0',
     },
     sections: [
       {
         id: sectionId,
         styles: {
           backgroundColor: '#ffffff',
-          padding: '32px 24px',
+          padding: '36px 40px',
+          margin: '40px auto',
         },
         columns: [
           {
             id: colId,
             components: [
               {
-                id: t1,
-                type: 'text',
-                content: { text: 'Hello there,' },
+                id: spacerTop,
+                type: 'spacer',
+                content: { height: '8px' },
                 styles: {
-                  fontSize: '24px',
-                  fontWeight: '700',
+                  height: '8px',
+                  lineHeight: '8px',
+                },
+              },
+              {
+                id: title,
+                type: 'text',
+                content: {
+                  text: 'Welcome!',
+                  variant: 'h1',
+                },
+                styles: {
+                  fontSize: '48px',
+                  fontWeight: '600',
+                  lineHeight: '1.1',
                   color: '#111827',
-                  fontFamily: 'Georgia, serif',
-                  margin: '0 0 12px 0',
+                  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif',
+                  margin: '0 0 18px 0',
+                  textAlign: 'center',
                 },
               },
               {
-                id: t2,
+                id: body,
                 type: 'text',
                 content: {
-                  text: 'This is a sample email built with the template editor. Drag blocks from the left, arrange them in the canvas, and export email-safe HTML when you are ready.',
+                  text: "We're excited to have you get started. First, you need to confirm your account. Just press the button below.",
                 },
                 styles: {
-                  fontSize: '16px',
+                  fontSize: '18px',
                   lineHeight: '1.6',
-                  color: '#4b5563',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
-                  margin: '0 0 20px 0',
-                },
-              },
-              {
-                id: img,
-                type: 'image',
-                content: {
-                  src: 'https://via.placeholder.com/552x180/e0e7ff/4338ca?text=Banner',
-                  alt: 'Banner',
-                },
-                styles: {
-                  maxWidth: '100%',
-                  height: 'auto',
-                  display: 'block',
-                  border: '0',
-                  margin: '0 0 20px 0',
+                  color: '#334155',
+                  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif',
+                  margin: '0 0 28px 0',
+                  textAlign: 'center',
                 },
               },
               {
                 id: btn,
                 type: 'button',
-                content: { label: 'View in browser', href: 'https://example.com' },
+                content: { label: 'Confirm Account', href: 'https://example.com/confirm' },
                 styles: {
-                  backgroundColor: '#4f46e5',
+                  backgroundColor: '#4ea4f1',
                   color: '#ffffff',
-                  padding: '14px 28px',
-                  borderRadius: '6px',
+                  padding: '14px 30px',
+                  borderRadius: '4px',
                   textDecoration: 'none',
-                  fontSize: '16px',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  fontSize: '22px',
+                  fontWeight: '600',
+                  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif',
                   display: 'inline-block',
+                  textAlign: 'center',
+                  margin: '0 auto 34px auto',
+                },
+              },
+              {
+                id: footer,
+                type: 'text',
+                content: {
+                  text: "If you have any questions, just reply to this email - we're always happy to help. \n\nBest regards,\nJulach Earzan",
+                },
+                styles: {
+                  fontSize: '17px',
+                  lineHeight: '1.6',
+                  color: '#475569',
+                  fontFamily: '"Segoe UI", Arial, Helvetica, sans-serif',
+                  margin: '0',
+                  textAlign: 'left',
                 },
               },
             ],

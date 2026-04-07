@@ -17,6 +17,7 @@ import { EditorToolbar } from '@/components/editor/EditorToolbar'
 import { emailBuilderCollision } from '@/components/editor/emailBuilderCollision'
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel'
 import { useEditorDragEnd } from '@/components/editor/useEditorDragEnd'
+import { useEmailStore } from '@/store/emailStore'
 
 type ActiveDragData = {
   source?: string
@@ -30,6 +31,7 @@ type ActiveDragData = {
  */
 export function EditorShell() {
   const applyDragEnd = useEditorDragEnd()
+  const canvasView = useEmailStore((s) => s.canvasView)
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null)
   const [activeData, setActiveData] = useState<ActiveDragData | undefined>(undefined)
   const [paletteOpen, setPaletteOpen] = useState(true)
@@ -66,29 +68,33 @@ export function EditorShell() {
       <div className="flex h-[100dvh] w-full flex-col bg-slate-50">
         <EditorToolbar />
         <div className="flex min-h-0 min-w-0 flex-1">
-          <aside
-            className={`shrink-0 overflow-y-auto overflow-x-hidden border-r border-slate-200 bg-white transition-[width] duration-200 ease-out ${
-              paletteOpen ? 'w-56' : 'w-12'
-            }`}
-          >
-            <ComponentPalette
-              collapsed={!paletteOpen}
-              onToggleCollapse={() => setPaletteOpen((o) => !o)}
-            />
-          </aside>
+          {canvasView !== 'templates' ? (
+            <aside
+              className={`shrink-0 overflow-y-auto overflow-x-hidden border-r border-slate-200 bg-white transition-[width] duration-200 ease-out ${
+                paletteOpen ? 'w-56' : 'w-12'
+              }`}
+            >
+              <ComponentPalette
+                collapsed={!paletteOpen}
+                onToggleCollapse={() => setPaletteOpen((o) => !o)}
+              />
+            </aside>
+          ) : null}
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-3">
             <EditorCanvas />
           </main>
-          <div
-            className={`flex h-full min-w-0 shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
-              propertiesOpen ? 'w-[30rem]' : 'w-12'
-            }`}
-          >
-            <PropertiesPanel
-              collapsed={!propertiesOpen}
-              onToggleCollapse={() => setPropertiesOpen((o) => !o)}
-            />
-          </div>
+          {canvasView !== 'templates' ? (
+            <div
+              className={`flex h-full min-w-0 shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+                propertiesOpen ? 'w-[30rem]' : 'w-12'
+              }`}
+            >
+              <PropertiesPanel
+                collapsed={!propertiesOpen}
+                onToggleCollapse={() => setPropertiesOpen((o) => !o)}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
       <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>

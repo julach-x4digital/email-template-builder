@@ -11,14 +11,22 @@ export type ApiEndpoint = {
 export type TemplateListItem = {
   id: string
   name?: string
+  description?: string
+  thumbnail?: string
+  isActive?: boolean
+  templateJson?: unknown
+  htmlOutput?: string
   updatedAt?: string
   createdAt?: string
 }
 
 export type TemplateCrudPayload = {
   name: string
+  description?: string
   html: string
   template: EmailTemplate
+  thumbnail?: string
+  isActive?: boolean
 }
 
 export function normalizeHttpMethod(method: string): string {
@@ -182,6 +190,93 @@ function normalizeCrudBase(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '')
 }
 
+function unwrapTemplateId(data: unknown): string {
+  if (!data || typeof data !== 'object') return ''
+  const o = data as Record<string, unknown>
+  if (typeof o.id === 'string') return o.id
+  if (typeof o._id === 'string') return o._id
+  const nested = o.data
+  if (nested && typeof nested === 'object') {
+    const d = nested as Record<string, unknown>
+    if (typeof d.id === 'string') return d.id
+    if (typeof d._id === 'string') return d._id
+  }
+  return ''
+}
+
+function mapTemplateRecord(x: unknown): TemplateListItem {
+  const o = x as Record<string, unknown>
+  return {
+    id: String(o.id ?? o._id ?? ''),
+    name: typeof o.name === 'string' ? o.name : undefined,
+    description: typeof o.description === 'string' ? o.description : undefined,
+    thumbnail:
+      typeof o.thumbnail === 'string'
+        ? o.thumbnail
+        : typeof o.preview_image === 'string'
+          ? o.preview_image
+          : undefined,
+    isActive:
+      typeof o.is_active === 'boolean'
+        ? o.is_active
+        : typeof o.isActive === 'boolean'
+          ? o.isActive
+          : undefined,
+    templateJson: o.template_json ?? o.templateJson ?? o.template,
+    htmlOutput:
+      typeof o.html_output === 'string'
+        ? o.html_output
+        : typeof o.htmlOutput === 'string'
+          ? o.htmlOutput
+          : undefined,
+    updatedAt:
+      typeof o.updated_at === 'string'
+        ? o.updated_at
+        : typeof o.updatedAt === 'string'
+          ? o.updatedAt
+          : undefined,
+    createdAt:
+      typeof o.created_at === 'string'
+        ? o.created_at
+        : typeof o.createdAt === 'string'
+          ? o.createdAt
+          : undefined,
+  }
+}
+
+function unwrapListRows(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data
+  if (!data || typeof data !== 'object') return []
+  const o = data as Record<string, unknown>
+  const candidates = [
+    o.items,
+    o.results,
+    o.rows,
+    o.templates,
+    o.data,
+    (o.data as Record<string, unknown> | undefined)?.items,
+    (o.data as Record<string, unknown> | undefined)?.results,
+    (o.data as Record<string, unknown> | undefined)?.rows,
+    (o.data as Record<string, unknown> | undefined)?.templates,
+    (o.payload as Record<string, unknown> | undefined)?.items,
+  ]
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate
+  }
+  return []
+}
+
+function unwrapTemplatePayload(data: unknown): unknown {
+  if (!data || typeof data !== 'object') return data
+  const o = data as Record<string, unknown>
+  if (o.template !== undefined) return o.template
+  if (o.data && typeof o.data === 'object') {
+    const d = o.data as Record<string, unknown>
+    if (d.template !== undefined) return d.template
+  }
+  return data
+}
+
 export async function createTemplateRecord(
   baseUrl: string,
   payload: TemplateCrudPayload,
@@ -192,14 +287,21 @@ export async function createTemplateRecord(
     method: 'POST',
     headers: ensureJsonHeaders({ ...(options?.headers ?? {}) }),
     credentials: options?.credentials ?? 'same-origin',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: payload.name,
+      description: payload.description ?? '',
+      template_json: payload.template,
+      html_output: payload.html,
+      thumbnail: payload.thumbnail ?? '',
+      is_active: payload.isActive ?? true,
+    }),
   })
   if (!res.ok) {
     const t = await res.text().catch(() => '')
     throw new Error(`Create template failed (${res.status}): ${t || res.statusText}`)
   }
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
-  return { id: String(data.id ?? data._id ?? '') }
+  const data = (await res.json().catch(() => ({}))) as unknown
+  return { id: unwrapTemplateId(data) }
 }
 
 export async function listTemplateRecords(
@@ -221,21 +323,8 @@ export async function listTemplateRecords(
     throw new Error(`List templates failed (${res.status}): ${t || res.statusText}`)
   }
   const data = (await res.json()) as unknown
-  const arr = Array.isArray(data)
-    ? data
-    : ((data as Record<string, unknown>)?.items ??
-      (data as Record<string, unknown>)?.data ??
-      [])
-  if (!Array.isArray(arr)) return []
-  return arr.map((x) => {
-    const o = x as Record<string, unknown>
-    return {
-      id: String(o.id ?? o._id ?? ''),
-      name: typeof o.name === 'string' ? o.name : undefined,
-      updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : undefined,
-      createdAt: typeof o.createdAt === 'string' ? o.createdAt : undefined,
-    }
-  })
+  const arr = unwrapListRows(data)
+  return arr.map(mapTemplateRecord).filter((x) => x.id)
 }
 
 export async function getTemplateRecord(
@@ -254,8 +343,10 @@ export async function getTemplateRecord(
     throw new Error(`Get template failed (${res.status}): ${t || res.statusText}`)
   }
   const data = (await res.json()) as unknown
-  const payload = (data as Record<string, unknown>)?.template ?? data
-  return normalizeEmailTemplate(payload)
+  const payload = unwrapTemplatePayload(data)
+  const obj = payload as Record<string, unknown>
+  const normalizedPayload = obj?.template_json ?? obj?.templateJson ?? payload
+  return normalizeEmailTemplate(normalizedPayload)
 }
 
 export async function updateTemplateRecord(
@@ -266,10 +357,17 @@ export async function updateTemplateRecord(
 ): Promise<void> {
   const url = `${normalizeCrudBase(baseUrl)}/api/gift-cards/email-templates/${encodeURIComponent(id)}`
   const res = await fetch(url, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: ensureJsonHeaders({ ...(options?.headers ?? {}) }),
     credentials: options?.credentials ?? 'same-origin',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: payload.name,
+      description: payload.description,
+      template_json: payload.template,
+      html_output: payload.html,
+      thumbnail: payload.thumbnail,
+      is_active: payload.isActive,
+    }),
   })
   if (!res.ok) {
     const t = await res.text().catch(() => '')
