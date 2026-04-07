@@ -1,6 +1,6 @@
 {
   "name": "@julach-earzan/email-template-builder",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "React email template editor with drag-and-drop blocks, preview, HTML export, and optional upload/export API hooks.",
   "type": "module",
   "author": "julach-earzan",
