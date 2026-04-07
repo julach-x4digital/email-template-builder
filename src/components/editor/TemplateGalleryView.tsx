@@ -217,7 +217,7 @@ export function TemplateGalleryView() {
                 <div key={row.id} className="group relative rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
                   <button
                     type="button"
-                    className="absolute right-2 top-2 z-20 hidden rounded-md border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-50 group-hover:block"
+                    className="absolute right-2 top-2 z-20 rounded-md border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-50"
                     onClick={() => setMenuOpenId((cur) => (cur === row.id ? null : row.id))}
                     aria-label="Template actions"
                   >
