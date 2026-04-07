@@ -25,6 +25,8 @@ export type EmailBuilderProps = {
   loadUrl?: ApiEndpoint
   /** Form field name for uploads (default `file`). */
   uploadFieldName?: string
+  /** Base URL for template CRUD endpoints (default `http://localhost:3001`). */
+  templatesBaseUrl?: string
   credentials?: RequestCredentials
   /** Controlled document: replaces the editor when this JSON value changes. */
   template?: unknown
@@ -46,6 +48,7 @@ function buildContextValue(props: EmailBuilderProps): EmailBuilderApiContextValu
     imgUrl: props.imgUrl,
     exportUrl: props.exportUrl,
     loadUrl: props.loadUrl,
+    templatesBaseUrl: props.templatesBaseUrl ?? 'http://localhost:3001',
     uploadFieldName: props.uploadFieldName ?? 'file',
     credentials: props.credentials ?? 'same-origin',
     parseUploadResponse: props.parseUploadResponse,

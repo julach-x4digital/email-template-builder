@@ -7,6 +7,7 @@ export type EmailBuilderApiContextValue = {
   imgUrl?: ApiEndpoint
   exportUrl?: ApiEndpoint
   loadUrl?: ApiEndpoint
+  templatesBaseUrl: string
   uploadFieldName: string
   credentials: RequestCredentials
   parseUploadResponse?: (json: unknown) => string | undefined
@@ -22,6 +23,7 @@ export type EmailBuilderApiContextValue = {
 
 const defaultValue: EmailBuilderApiContextValue = {
   api: false,
+  templatesBaseUrl: 'http://localhost:3001',
   uploadFieldName: 'file',
   credentials: 'same-origin',
 }

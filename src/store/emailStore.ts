@@ -12,7 +12,7 @@ import type {
 import { newId } from '@/utils/id'
 import { findBlockLocation, findComponentById } from '@/utils/templateQueries'
 
-const HISTORY_LIMIT = 50
+const HISTORY_LIMIT = 10
 
 function cloneTemplate(t: EmailTemplate): EmailTemplate {
   return structuredClone(t)
