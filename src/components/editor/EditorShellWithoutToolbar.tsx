@@ -16,7 +16,6 @@ import { EditorDragOverlay } from '@/components/editor/EditorDragOverlay'
 import { emailBuilderCollision } from '@/components/editor/emailBuilderCollision'
 import { PropertiesPanel } from '@/components/editor/PropertiesPanel'
 import { useEditorDragEnd } from '@/components/editor/useEditorDragEnd'
-import { useEmailStore } from '@/store/emailStore'
 
 type ActiveDragData = {
   source?: string

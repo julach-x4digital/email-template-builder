@@ -116,7 +116,7 @@ function EmailBuilderEffects({
             const apiTemplate = await getTemplateRecord(`http://localhost:3001`, templateId, {
               credentials: credentials ?? 'same-origin'
             })
-            loadedTemplate = apiTemplate.template
+            loadedTemplate = apiTemplate
           } catch (apiError) {
             console.warn('Failed to load from API, trying localStorage:', apiError)
           }

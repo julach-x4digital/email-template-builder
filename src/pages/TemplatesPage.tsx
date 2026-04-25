@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { FiEdit2, FiPlus, FiTrash2 } from 'react-icons/fi'
 import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
-import { getTemplatesFromStorage, deleteTemplateFromStorage, type StoredTemplate } from '@/utils/localStorage'
+import { getTemplatesFromStorage, deleteTemplateFromStorage } from '@/utils/localStorage'
 import { listTemplateRecords, deleteTemplateRecord } from '@/utils/emailBuilderApi'
 import { TopNavbar } from '@/components/navigation/TopNavbar'
 
@@ -33,13 +33,13 @@ export function TemplatesPage() {
     try {
       if (canUseCrud) {
         // Load from API
-        const apiTemplates = await listTemplateRecords(apiCfg.templatesBaseUrl!, {
+        const apiTemplates = await listTemplateRecords(apiCfg.templatesBaseUrl!, {}, {
           credentials: apiCfg.credentials,
         })
         
         const templateCards: TemplateCard[] = apiTemplates.map(t => ({
           id: t.id,
-          name: t.name,
+          name: t.name ?? 'Untitled template',
           description: t.description,
           updatedAt: t.updatedAt || t.createdAt || new Date().toISOString(),
         }))
