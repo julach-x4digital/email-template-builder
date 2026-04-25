@@ -14,6 +14,7 @@ export function createExampleTemplate(): EmailTemplate {
   return {
     id: newId(),
     documentName: 'Welcome',
+    description: 'Sample welcome / confirmation layout.',
     meta: {
       subject: 'Welcome! Confirm your account',
       preheader: 'Press the button below to verify your account.',

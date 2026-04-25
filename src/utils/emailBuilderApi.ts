@@ -277,6 +277,17 @@ function unwrapTemplatePayload(data: unknown): unknown {
   return data
 }
 
+/** Read API record name/description from common response shapes. */
+function readRecordNameDescription(data: unknown): { name?: string; description?: string } {
+  if (!data || typeof data !== 'object') return {}
+  const o = data as Record<string, unknown>
+  const name = typeof o.name === 'string' ? o.name : undefined
+  const description = typeof o.description === 'string' ? o.description : undefined
+  if (name !== undefined || description !== undefined) return { name, description }
+  if (o.data && typeof o.data === 'object') return readRecordNameDescription(o.data)
+  return {}
+}
+
 export async function createTemplateRecord(
   baseUrl: string,
   payload: TemplateCrudPayload,
@@ -346,7 +357,13 @@ export async function getTemplateRecord(
   const payload = unwrapTemplatePayload(data)
   const obj = payload as Record<string, unknown>
   const normalizedPayload = obj?.template_json ?? obj?.templateJson ?? payload
-  return normalizeEmailTemplate(normalizedPayload)
+  const base = normalizeEmailTemplate(normalizedPayload)
+  const { name: nameFromApi, description: descFromApi } = readRecordNameDescription(data)
+  return {
+    ...base,
+    documentName: base.documentName ?? nameFromApi,
+    description: base.description ?? descFromApi,
+  }
 }
 
 export async function updateTemplateRecord(

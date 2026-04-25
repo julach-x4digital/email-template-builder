@@ -210,8 +210,18 @@ export function emptyEmailTemplate(): EmailTemplate {
 export function normalizeEmailTemplate(input: unknown): EmailTemplate {
   if (!isRecord(input)) return emptyEmailTemplate()
 
+  const documentName =
+    typeof input.documentName === 'string'
+      ? input.documentName
+      : typeof input.name === 'string'
+        ? input.name
+        : undefined
+  const description = typeof input.description === 'string' ? input.description : undefined
+
   return {
     id: typeof input.id === 'string' ? input.id : newId(),
+    ...(documentName !== undefined ? { documentName } : {}),
+    ...(description !== undefined ? { description } : {}),
     width: typeof input.width === 'string' ? input.width : '600px',
     bodyStyles: normalizeStyles(input.bodyStyles),
     meta: normalizeMeta(input.meta),

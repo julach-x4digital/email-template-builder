@@ -1,16 +1,21 @@
 import { useEffect, useLayoutEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import type { CSSProperties } from 'react'
 import './index.css'
-import { EditorShell } from '@/components/editor/EditorShell'
+import { EditorShellWithoutToolbar } from '@/components/editor/EditorShellWithoutToolbar'
 import { EmailBuilderApiProvider } from '@/context/EmailBuilderApiProvider'
 import type { EmailBuilderApiContextValue } from '@/context/emailBuilderApiContext'
 import { useEmailStore } from '@/store/emailStore'
 import type { EmailTemplate } from '@/types'
 import type { ApiEndpoint } from '@/utils/emailBuilderApi'
-import { fetchTemplateFromEndpoint } from '@/utils/emailBuilderApi'
+import { fetchTemplateFromEndpoint, getTemplateRecord } from '@/utils/emailBuilderApi'
 import { normalizeEmailTemplate } from '@/utils/normalizeEmailTemplate'
+import { getTemplateFromStorage } from '@/utils/localStorage'
+import { TopNavbar } from '@/components/navigation/TopNavbar'
+import { createExampleTemplate } from '@/core/exampleTemplate'
 
 export type { ApiEndpoint }
+const EDITOR_DRAFT_STORAGE_KEY = 'email-template-builder:editor-draft'
 
 export type EmailBuilderProps = {
   className?: string
@@ -68,13 +73,103 @@ function EmailBuilderEffects({
   credentials,
   onTemplateChange,
 }: EmailBuilderProps) {
+  const { templateId } = useParams<{ templateId?: string }>()
   const setTemplate = useEmailStore((s) => s.setTemplate)
+  const setActiveTemplateId = useEmailStore((s) => s.setActiveTemplateId)
+  const setCanvasView = useEmailStore((s) => s.setCanvasView)
   const serialized =
     templateProp !== undefined ? JSON.stringify(templateProp) : undefined
 
   const loadUrlKey = loadUrl
     ? `${loadUrl.method}:${loadUrl.url}:${JSON.stringify(loadUrl.headers ?? {})}`
     : ''
+
+  // Load template from URL parameter
+  useEffect(() => {
+    if (templateProp !== undefined) return
+    if (!templateId) {
+      // New template route: keep in-memory state and restore local draft if available.
+      // This prevents losing unsaved edits when navigating Preview -> Editor.
+      try {
+        const rawDraft = localStorage.getItem(EDITOR_DRAFT_STORAGE_KEY)
+        if (rawDraft) {
+          const parsed = JSON.parse(rawDraft)
+          const normalized = normalizeEmailTemplate(parsed)
+          setTemplate(normalized)
+        }
+      } catch {
+        localStorage.removeItem(EDITOR_DRAFT_STORAGE_KEY)
+      }
+      setActiveTemplateId(null)
+      setCanvasView('editor')
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        let loadedTemplate: EmailTemplate | null = null
+
+        if (api) {
+          // Try to load from API first
+          try {
+            const apiTemplate = await getTemplateRecord(`http://localhost:3001`, templateId, {
+              credentials: credentials ?? 'same-origin'
+            })
+            loadedTemplate = apiTemplate.template
+          } catch (apiError) {
+            console.warn('Failed to load from API, trying localStorage:', apiError)
+          }
+        }
+
+        // Fallback to localStorage
+        if (!loadedTemplate) {
+          const stored = getTemplateFromStorage(templateId)
+          if (stored) {
+            loadedTemplate = stored.template
+          }
+        }
+
+        // Final fallback to mock data
+        if (!loadedTemplate) {
+          try {
+            const response = await fetch('/mock/email-templates.json')
+            const data = await response.json()
+            const mockTemplate = data.items.find((item: any) => item.id === templateId)
+            if (mockTemplate) {
+              loadedTemplate = mockTemplate.template
+            }
+          } catch (mockError) {
+            console.warn('Failed to load mock template:', mockError)
+          }
+        }
+
+        if (cancelled) return
+
+        if (loadedTemplate) {
+          setTemplate(normalizeEmailTemplate(loadedTemplate))
+          setActiveTemplateId(templateId)
+          setCanvasView('editor')
+        } else {
+          onLoadError?.(new Error(`Template with ID ${templateId} not found`))
+          setTemplate(createExampleTemplate())
+          setActiveTemplateId(null)
+          setCanvasView('editor')
+        }
+      } catch (e) {
+        if (cancelled) return
+        const err = e instanceof Error ? e : new Error(String(e))
+        onLoadError?.(err)
+        setTemplate(createExampleTemplate())
+        setActiveTemplateId(null)
+        setCanvasView('editor')
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [templateId, api, credentials, templateProp, setTemplate, setActiveTemplateId, setCanvasView, onLoadError])
 
   useLayoutEffect(() => {
     if (serialized === undefined) return
@@ -93,6 +188,7 @@ function EmailBuilderEffects({
   useEffect(() => {
     if (!api || !loadUrl) return
     if (templateProp !== undefined) return
+    if (templateId) return // Don't use loadUrl if we have templateId
     let cancelled = false
     ;(async () => {
       try {
@@ -108,7 +204,7 @@ function EmailBuilderEffects({
     return () => {
       cancelled = true
     }
-  }, [api, loadUrlKey, credentials, templateProp, setTemplate, onLoadError, loadUrl])
+  }, [api, loadUrlKey, credentials, templateProp, setTemplate, onLoadError, loadUrl, templateId])
 
   useEffect(() => {
     if (!onTemplateChange) return
@@ -120,6 +216,18 @@ function EmailBuilderEffects({
       onTemplateChange(state.template)
     })
   }, [onTemplateChange])
+
+  useEffect(() => {
+    let prev = ''
+    return useEmailStore.subscribe((state) => {
+      // Persist unsaved draft for no-id editor sessions.
+      if (state.activeTemplateId) return
+      const serialized = JSON.stringify(state.template)
+      if (serialized === prev) return
+      prev = serialized
+      localStorage.setItem(EDITOR_DRAFT_STORAGE_KEY, serialized)
+    })
+  }, [])
 
   return null
 }
@@ -134,7 +242,8 @@ export function EmailBuilder(props: EmailBuilderProps) {
         className={props.className ?? 'email-template-builder min-h-[100dvh] w-full'}
         style={props.style}
       >
-        <EditorShell />
+        <TopNavbar />
+        <EditorShellWithoutToolbar />
       </div>
     </EmailBuilderApiProvider>
   )

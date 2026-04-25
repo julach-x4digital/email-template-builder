@@ -97,6 +97,17 @@ function InputPill(props: ComponentProps<'input'>) {
   )
 }
 
+const textareaInnerClass =
+  'box-border min-h-[4.5rem] w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+
+function TextareaPill(props: ComponentProps<'textarea'>) {
+  return (
+    <div className="mt-0.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5">
+      <textarea className={textareaInnerClass} rows={4} {...props} />
+    </div>
+  )
+}
+
 function SelectPill(props: ComponentProps<'select'>) {
   return (
     <div className="relative mt-0.5 rounded-full border border-slate-200 bg-slate-50 p-1.5">
@@ -975,6 +986,17 @@ export function PropertiesPanel({
         {!selected && (
           <section className="mb-6">
             <h3 className="mb-2 text-sm font-semibold text-slate-800">Email canvas</h3>
+            <Field label="Description">
+              <TextareaPill
+                value={template.description ?? ''}
+                onChange={(e) =>
+                  updateDocument({
+                    description: e.target.value === '' ? undefined : e.target.value,
+                  })
+                }
+                placeholder="Internal notes or template summary for the API"
+              />
+            </Field>
             <Field label="Width (max)">
               <InputPill
                 value={template.width}

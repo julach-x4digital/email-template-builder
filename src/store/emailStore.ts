@@ -40,7 +40,7 @@ export type EmailStore = {
   setTemplate: (t: EmailTemplate) => void
   updateDocument: (
     patch: Partial<
-      Pick<EmailTemplate, 'width' | 'bodyStyles' | 'meta' | 'documentName'>
+      Pick<EmailTemplate, 'width' | 'bodyStyles' | 'meta' | 'documentName' | 'description' | 'name'>
     >,
   ) => void
   previewDevice: 'desktop' | 'mobile'
@@ -107,7 +107,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   past: [],
   future: [],
   previewDevice: 'desktop',
-  canvasView: 'editor',
+  canvasView: 'templates',
   activeTemplateId: null,
 
   setPreviewDevice: (d) => set({ previewDevice: d }),

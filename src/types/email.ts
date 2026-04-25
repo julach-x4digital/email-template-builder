@@ -77,6 +77,10 @@ export type EmailTemplate = {
   id: string
   /** Builder document title (e.g. “New Message”). */
   documentName?: string
+  /** Template name - required for saving and identification */
+  name?: string
+  /** Stored with the template record (API / gallery metadata). */
+  description?: string
   meta?: { subject?: string; preheader?: string }
   /** Max width of inner email body (e.g. 600px) */
   width: string

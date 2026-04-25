@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { ImageContent } from '@/types'
 import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
 import { uploadFileToEndpoint } from '@/utils/emailBuilderApi'
@@ -7,8 +7,20 @@ import { FiUploadCloud, FiLink, FiImage, FiTrash2 } from 'react-icons/fi'
 const MAX_MB = 3
 const MAX_BYTES = MAX_MB * 1024 * 1024
 
-function isBlobUrl(url: string) {
-  return url.startsWith('blob:')
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const out = typeof reader.result === 'string' ? reader.result : ''
+      if (!out) {
+        reject(new Error('Failed to read image file'))
+        return
+      }
+      resolve(out)
+    }
+    reader.onerror = () => reject(new Error('Failed to read image file'))
+    reader.readAsDataURL(file)
+  })
 }
 
 export function ImageUploadPanel({
@@ -23,7 +35,6 @@ export function ImageUploadPanel({
   onUpdateStyles: (styles: Record<string, string>) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const prevBlobUrlRef = useRef<string | null>(null)
   const apiCfg = useEmailBuilderApi()
 
   const [isDragging, setIsDragging] = useState(false)
@@ -41,14 +52,6 @@ export function ImageUploadPanel({
     onUpdateContent({ src: next, alt: image.alt || 'Image' })
   }
 
-  useEffect(() => {
-    return () => {
-      if (prevBlobUrlRef.current && isBlobUrl(prevBlobUrlRef.current)) {
-        URL.revokeObjectURL(prevBlobUrlRef.current)
-      }
-    }
-  }, [])
-
   const updateFromFile = async (file: File) => {
     setError(null)
     if (file.size > MAX_BYTES) {
@@ -64,10 +67,6 @@ export function ImageUploadPanel({
           credentials: apiCfg.credentials,
           parseUploadResponse: apiCfg.parseUploadResponse,
         })
-        if (prevBlobUrlRef.current && isBlobUrl(prevBlobUrlRef.current)) {
-          URL.revokeObjectURL(prevBlobUrlRef.current)
-        }
-        prevBlobUrlRef.current = null
         onUpdateContent({ src: url, alt: image.alt || file.name || 'Image' })
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Upload failed')
@@ -77,12 +76,9 @@ export function ImageUploadPanel({
       return
     }
 
-    const blobUrl = URL.createObjectURL(file)
-    if (prevBlobUrlRef.current && isBlobUrl(prevBlobUrlRef.current)) {
-      URL.revokeObjectURL(prevBlobUrlRef.current)
-    }
-    prevBlobUrlRef.current = blobUrl
-    onUpdateContent({ src: blobUrl, alt: image.alt || file.name || 'Image' })
+    // Use data URLs for local mode so preview survives route changes/unmount.
+    const dataUrl = await fileToDataUrl(file)
+    onUpdateContent({ src: dataUrl, alt: image.alt || file.name || 'Image' })
   }
 
   return (

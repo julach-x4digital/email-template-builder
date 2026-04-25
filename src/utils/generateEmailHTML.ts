@@ -23,6 +23,27 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function toRenderableAssetUrl(raw: string): string {
+  const v = raw.trim()
+  if (!v) return ''
+  // Keep already-absolute and special schemes as-is.
+  if (
+    /^(https?:)?\/\//i.test(v) ||
+    /^(data|blob|cid):/i.test(v)
+  ) {
+    return v
+  }
+  // In browser preview (srcDoc), make relative paths absolute to current origin.
+  if (typeof window !== 'undefined') {
+    try {
+      return new URL(v, window.location.origin + '/').href
+    } catch {
+      return v
+    }
+  }
+  return v
+}
+
 function tdOpen(styles: Record<string, string>, extra = ''): string {
   const s = stylesToInlineAttr(styles)
   return `<td${extra}${s ? ` style="${esc(s)}"` : ''}>`
@@ -86,7 +107,8 @@ function renderText(c: EmailComponent): string {
 }
 
 function renderImage(c: EmailComponent): string {
-  const src = 'src' in c.content ? esc(c.content.src) : ''
+  const src =
+    'src' in c.content ? esc(toRenderableAssetUrl(c.content.src)) : ''
   const alt = 'alt' in c.content ? esc(c.content.alt) : ''
   if (!src) return ''
   const { textAlign, ...imgStyleRest } = c.styles
@@ -109,7 +131,7 @@ function renderButton(c: EmailComponent): string {
   const align = emailTextAlign(textAlign)
   const btn = c.content as ButtonContent
   const icon = btn.icon
-  const iconSrc = icon?.src ? esc(icon.src) : ''
+  const iconSrc = icon?.src ? esc(toRenderableAssetUrl(icon.src)) : ''
   const iconAlt = icon?.alt ? esc(icon.alt) : ''
   const aStyles = stylesToInlineAttr({
     display: 'inline-block',
@@ -223,6 +245,8 @@ export function generateEmailHTML(templateJson: EmailTemplate): string {
   const sectionsHtml = t.sections.map(renderSection).join('\n')
   const preheader = t.meta?.preheader ? renderPreheader(t.meta.preheader) : ''
   const title = t.meta?.subject ? esc(t.meta.subject) : 'Email'
+  const baseHref =
+    typeof window !== 'undefined' ? esc(`${window.location.origin}/`) : '/'
 
   const inner = `
 <table role="presentation" width="${esc(width)}" cellpadding="0" cellspacing="0" border="0" style="max-width:100%;width:100%;margin:0 auto;background-color:#ffffff;">
@@ -235,6 +259,7 @@ export function generateEmailHTML(templateJson: EmailTemplate): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <base href="${baseHref}" />
   <title>${title}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 </head>

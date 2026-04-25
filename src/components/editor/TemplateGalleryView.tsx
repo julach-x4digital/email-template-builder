@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FiEdit2, FiEye, FiMoreVertical, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { FiEdit2, FiEye, FiMoreVertical, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi'
+import { createExampleTemplate } from '@/core/exampleTemplate'
 import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
 import { useEmailStore } from '@/store/emailStore'
 import {
@@ -114,7 +115,11 @@ export function TemplateGalleryView() {
     try {
       if (row.templateJson !== undefined) {
         const next = normalizeEmailTemplate(row.templateJson)
-        setTemplate(next)
+        setTemplate({
+          ...next,
+          documentName: next.documentName ?? row.name,
+          description: next.description ?? row.description,
+        })
       } else if (canUseCrud) {
         const next = await getTemplateRecord(
           apiCfg.templatesBaseUrl,
@@ -161,6 +166,15 @@ export function TemplateGalleryView() {
     return `${r.name ?? ''} ${r.id}`.toLowerCase().includes(q)
   })
 
+  const startNewTemplate = () => {
+    setActiveTemplateId(null)
+    setTemplate(createExampleTemplate())
+    setCanvasView('editor')
+  }
+
+  const isEmptyList = rows.length === 0 && !loading
+  const noSearchMatches = rows.length > 0 && filteredRows.length === 0
+
   return (
     <div className="flex h-full min-h-0 min-w-0 w-full flex-1 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3">
@@ -178,10 +192,11 @@ export function TemplateGalleryView() {
         </div>
         <button
           type="button"
-          onClick={() => setCanvasView('editor')}
-          className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          onClick={startNewTemplate}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
-          Back to editor
+          <FiPlus className="h-4 w-4" aria-hidden />
+          Create template
         </button>
         <button
           type="button"
@@ -206,8 +221,33 @@ export function TemplateGalleryView() {
 
       <div className="min-h-0 flex-1 overflow-auto p-4">
         {filteredRows.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-            No templates found.
+          <div className="mx-auto max-w-md rounded-md border border-dashed border-slate-300 p-10 text-center">
+            {loading && rows.length === 0 ? (
+              <p className="text-sm text-slate-600">Loading templates…</p>
+            ) : noSearchMatches ? (
+              <p className="text-sm text-slate-600">No templates match your search.</p>
+            ) : isEmptyList ? (
+              <>
+                <p className="text-sm font-medium text-slate-800">
+                  {canUseCrud ? 'No templates yet' : 'No mock templates loaded'}
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {canUseCrud
+                    ? 'Create your first template to open the editor, then use Save template to store it on the API.'
+                    : 'Add entries to your mock JSON or connect the API to list templates.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={startNewTemplate}
+                  className="mt-6 inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  <FiPlus className="h-4 w-4" aria-hidden />
+                  Create template
+                </button>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">No templates found.</p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -280,6 +320,9 @@ export function TemplateGalleryView() {
                       <div className="truncate text-sm font-semibold text-slate-900">
                         {row.name || 'Untitled template'}
                       </div>
+                      {row.description ? (
+                        <div className="mt-0.5 line-clamp-2 text-xs text-slate-600">{row.description}</div>
+                      ) : null}
                       <div className="mt-1 text-xs text-slate-500">
                         {formatDateLabel(row.updatedAt || row.createdAt)}
                       </div>

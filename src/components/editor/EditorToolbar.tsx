@@ -4,7 +4,7 @@ import { FiEdit2 } from 'react-icons/fi'
 import { createExampleTemplate } from '@/core/exampleTemplate'
 import { useEmailBuilderApi } from '@/context/useEmailBuilderApi'
 import { useEmailStore } from '@/store/emailStore'
-import { updateTemplateRecord } from '@/utils/emailBuilderApi'
+import { createTemplateRecord, updateTemplateRecord } from '@/utils/emailBuilderApi'
 import { generateEmailHTML } from '@/utils/generateEmailHTML'
 
 /** Top actions: sections, undo/redo, views, template update. */
@@ -20,31 +20,39 @@ export function EditorToolbar() {
   const canvasView = useEmailStore((s) => s.canvasView)
   const setCanvasView = useEmailStore((s) => s.setCanvasView)
   const activeTemplateId = useEmailStore((s) => s.activeTemplateId)
+  const setActiveTemplateId = useEmailStore((s) => s.setActiveTemplateId)
+  const updateDocument = useEmailStore((s) => s.updateDocument)
 
   const isTemplatesView = canvasView === 'templates'
   const canUseCrud = apiCfg.api && !!apiCfg.templatesBaseUrl
 
-  const updateCurrentTemplate = async () => {
-    if (!canUseCrud) return
-    if (!activeTemplateId) {
-      apiCfg.onExportError?.(new Error('Select a template first from Templates view.'))
-      return
+  const saveOrUpdateTemplate = async () => {
+    if (!canUseCrud || isTemplatesView) return
+    const html = generateEmailHTML(template)
+    const payload = {
+      name: template.documentName || 'Untitled template',
+      description: template.description ?? '',
+      html,
+      template,
+      isActive: true,
     }
     try {
-      const html = generateEmailHTML(template)
-      await updateTemplateRecord(
-        apiCfg.templatesBaseUrl,
-        activeTemplateId,
-        {
-          name: template.documentName || 'Untitled template',
-          description: '',
-          html,
-          template,
-          isActive: true,
-        },
-        { credentials: apiCfg.credentials, headers: apiCfg.exportUrl?.headers },
-      )
-      apiCfg.onExportSuccess?.(new Response(null, { status: 200, statusText: 'Updated' }))
+      if (activeTemplateId) {
+        await updateTemplateRecord(
+          apiCfg.templatesBaseUrl,
+          activeTemplateId,
+          payload,
+          { credentials: apiCfg.credentials, headers: apiCfg.exportUrl?.headers },
+        )
+        apiCfg.onExportSuccess?.(new Response(null, { status: 200, statusText: 'Updated' }))
+      } else {
+        const { id } = await createTemplateRecord(apiCfg.templatesBaseUrl, payload, {
+          credentials: apiCfg.credentials,
+          headers: apiCfg.exportUrl?.headers,
+        })
+        setActiveTemplateId(id)
+        apiCfg.onExportSuccess?.(new Response(null, { status: 201, statusText: 'Created' }))
+      }
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e))
       apiCfg.onExportError?.(err)
@@ -53,7 +61,27 @@ export function EditorToolbar() {
 
   return (
     <header className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-4 py-2">
-      <h1 className="mr-4 text-sm font-semibold text-slate-800">Email builder</h1>
+      {isTemplatesView ? (
+        <h1 className="mr-2 text-sm font-semibold text-slate-800">Email builder</h1>
+      ) : (
+        <div className="mr-2 flex min-w-0 max-w-[min(100%,20rem)] flex-col gap-0.5">
+          <label htmlFor="email-builder-template-name" className="sr-only">
+            Template name
+          </label>
+          <input
+            id="email-builder-template-name"
+            type="text"
+            value={template.documentName ?? ''}
+            onChange={(e) =>
+              updateDocument({
+                documentName: e.target.value === '' ? undefined : e.target.value,
+              })
+            }
+            placeholder="Template name"
+            className="min-w-0 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          />
+        </div>
+      )}
       <button
         type="button"
         disabled={isTemplatesView}
@@ -98,10 +126,14 @@ export function EditorToolbar() {
       {isTemplatesView ? (
         <button
           type="button"
-          onClick={() => setCanvasView('editor')}
-          className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+          onClick={() => {
+            setActiveTemplateId(null)
+            setTemplate(createExampleTemplate())
+            setCanvasView('editor')
+          }}
+          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
         >
-          Back to editor
+          Create template
         </button>
       ) : (
         <button
@@ -130,12 +162,12 @@ export function EditorToolbar() {
 
       <button
         type="button"
-        disabled={!canUseCrud || !activeTemplateId || isTemplatesView}
-        onClick={() => void updateCurrentTemplate()}
+        disabled={!canUseCrud || isTemplatesView}
+        onClick={() => void saveOrUpdateTemplate()}
         className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
       >
         <FiEdit2 className="h-4 w-4" aria-hidden />
-        Update template
+        {activeTemplateId ? 'Update template' : 'Save template'}
       </button>
     </header>
   )

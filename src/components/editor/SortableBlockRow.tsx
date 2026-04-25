@@ -79,7 +79,7 @@ export function SortableBlockRow({
       {/* Component hover toolbar */}
       <div
         className={[
-          'absolute right-2 top-2 z-20 flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1 py-1 shadow-sm',
+          'absolute right-0 top-[-35px] z-20 flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1 py-1 shadow-sm',
           'transition-all duration-150',
           toolbarVisible,
         ].join(' ')}
@@ -93,32 +93,6 @@ export function SortableBlockRow({
           {...listeners}
         >
           <FiMove aria-hidden />
-        </button>
-
-        <button
-          type="button"
-          aria-label="Duplicate block"
-          className="flex h-7 items-center justify-center rounded bg-slate-50 px-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-          onClick={(e) => {
-            e.stopPropagation()
-            setMoreOpen(false)
-            duplicateComponent(component.id)
-          }}
-        >
-          <FiCopy aria-hidden />
-        </button>
-
-        <button
-          type="button"
-          aria-label="Delete block"
-          className="flex h-7 items-center justify-center rounded bg-slate-50 px-2 text-xs font-semibold text-red-700 hover:bg-red-50"
-          onClick={(e) => {
-            e.stopPropagation()
-            setMoreOpen(false)
-            removeComponent(component.id)
-          }}
-        >
-          <FiTrash2 aria-hidden />
         </button>
 
         <div className="relative">
